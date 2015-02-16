@@ -2,7 +2,8 @@ extern crate cgmath;
 extern crate rand;
 
 use cgmath::Point2;
-use person::{PersonFactory, Status};
+use person::{ObjectFactory, Status, Person};
+use std::default::Default;
 
 pub mod person;
 pub mod simulation;
@@ -21,11 +22,16 @@ mod constants {
     pub const TIME_INFECTIOUS: u32 = 50;
 }
 
+macro_rules! make_object {
+    ($t: ty, [$($arg: expr), *]) => ($t::new($arg))
+}
+
 fn main() {
-    let mut factory = PersonFactory::new();
+    let mut factory: ObjectFactory<Person> = ObjectFactory::new();
 
     for i in 0..10 {
-        let p = factory.make_person(Point2::new(2, 2), Status::Healthy);
-        println!("p.id = {}", p.id);
+        let mut person: Person = Default::default();
+        factory.wrap(&mut person);
+        println!("{}", person.id);
     }
 }
