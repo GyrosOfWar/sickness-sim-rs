@@ -3,7 +3,7 @@ use constants::*;
 use rand::{ThreadRng, Rng};
 use std::num::Float;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Status {
     Healthy,
     Infectious,
@@ -11,7 +11,7 @@ pub enum Status {
     Dead
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Direction {
     Top = 0,
     Right = 1,
@@ -21,7 +21,7 @@ pub enum Direction {
 
 pub type Position = Point2<u32>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Person {
     pub id: usize,
     pub position: Position,
@@ -33,8 +33,24 @@ pub struct Person {
 }
 
 impl Person {
-    // TODO fn for is_infected(t: usize), is_sick(t: usize) etc.
+    pub fn new(id: usize, pos: Position, status: Status) -> Person {
+        let t_infected = if status == Status::Healthy {
+            None
+        } else {
+            Some(0)
+        };
 
+        Person {
+            id: id,
+            position: pos,
+            status: status,
+            facing_direction: Direction::Right,
+            t_infected: t_infected,
+            t_sick: None,
+            t_died: None
+        }
+    }
+    
     fn is_sick(&self, time: u32) -> bool {
         match self.t_infected {
             Some(inf) => time >= inf + TIME_INFECTIOUS,
@@ -56,7 +72,7 @@ impl Person {
         }
     }
 
-    pub fn distance_to(&self, other: Person) -> f64 {
+    pub fn distance_to(&self, other: &Person) -> f64 {
         let x1 = self.position.x as f64;
         let x2 = other.position.x as f64;
         let y1 = self.position.y as f64;
@@ -86,30 +102,22 @@ impl Person {
     }
 }
 
-pub struct PersonFactory {
-    last_id: usize
-}
-
-impl PersonFactory {
-    pub fn new() -> PersonFactory {
-        PersonFactory {
-            last_id: 0
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::thread_rng;
+    use cgmath::Point2;
+    use constants::*;
+    
+    #[test]
+    fn state_changes() {
+        let mut rng = thread_rng();
+        let mut person = Person::new(0, Point2::new(0, 0), Status::Infectious);
+        for i in (1..TIME_INFECTIOUS+1) {
+            person.tick(i, &mut rng);
+            println!("t = {:?}, person.status: {:?}", i, person.status);
         }
-    }
 
-    pub fn new_person(&mut self, status: Status, position: Position) -> Person {
-        let person = Person {
-            position: position,
-            status: status,
-            id: self.last_id,
-            facing_direction: Direction::Right,
-            t_infected: None,
-            t_sick: None,
-            t_died: None
-        };
-
-        self.last_id += 1;
-        person
+        assert_eq!(person.status, Status::Sick)
     }
 }
- 

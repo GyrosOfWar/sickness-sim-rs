@@ -1,12 +1,11 @@
 extern crate cgmath;
 extern crate rand;
 
-use cgmath::Point2;
 use simulation::Simulation;
-use person::Status;
 
 pub mod person;
 pub mod simulation;
+pub mod quadtree;
 
 #[allow(dead_code)]
 mod constants {
@@ -28,12 +27,9 @@ mod constants {
 }
 
 fn main() {
-    
-}
+    let mut sim = Simulation::new();
 
-#[test]
-fn population_simple() {
-    let mut simulation = Simulation::new();
-    let infected_count = simulation.population.iter().filter(|p| p.status == Status::Infectious).count();
-    assert_eq!(infected_count, constants::INITIAL_INFECTED as usize);
+    while !sim.is_finished() {
+        sim.tick();
+    }
 }
