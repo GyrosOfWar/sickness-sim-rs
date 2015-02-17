@@ -1,8 +1,9 @@
 use cgmath::Point2;
-use constants;
-use std::default::Default;
+use constants::*;
+use rand::{ThreadRng, Rng};
+use std::num::Float;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Status {
     Healthy,
     Infectious,
@@ -10,13 +11,7 @@ pub enum Status {
     Dead
 }
 
-impl Default for Status {
-    fn default() -> Status {
-        Status::Healthy
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Direction {
     Top = 0,
     Right = 1,
@@ -24,67 +19,97 @@ pub enum Direction {
     Left = 3
 }
 
-impl Default for Direction {
-    fn default() -> Direction {
-        Direction::Right
-    }
-}
-
 pub type Position = Point2<u32>;
 
 #[derive(Debug)]
 pub struct Person {
     pub id: usize,
-    position: Position,
-    status: Status,
-    facing_direction: Direction
+    pub position: Position,
+    pub status: Status,
+    pub facing_direction: Direction,
+    pub t_infected: Option<u32>,
+    pub t_sick: Option<u32>,
+    pub t_died: Option<u32>
 }
 
 impl Person {
-    pub fn tick(&mut self, time: u32) {
-        
-    }
-}
+    // TODO fn for is_infected(t: usize), is_sick(t: usize) etc.
 
-impl Default for Person {
-    fn default() -> Person {
-        Person {
-            id: 0,
-            position: Point2::new(0, 0),
-            status: Status::Healthy,
-            facing_direction: Direction::Right
+    fn is_sick(&self, time: u32) -> bool {
+        match self.t_infected {
+            Some(inf) => time >= inf + TIME_INFECTIOUS,
+            None => false
+        }
+    }
+
+    fn is_dead(&self, time: u32, rng: &mut ThreadRng) -> bool {
+        match self.t_sick {
+            Some(sick) => {
+                if time >= sick + TIME_SICK {
+                    let t: f64 = rng.gen();
+                    t <= DIE_RATE
+                } else {
+                    false
+                }
+            },
+            None => false
+        }
+    }
+
+    pub fn distance_to(&self, other: Person) -> f64 {
+        let x1 = self.position.x as f64;
+        let x2 = other.position.x as f64;
+        let y1 = self.position.y as f64;
+        let y2 = other.position.y as f64;
+
+        ((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)).sqrt()
+    }
+    
+    pub fn tick(&mut self, time: u32, rng: &mut ThreadRng) {
+        // TODO
+        match self.status {
+            Status::Healthy => {},
+            Status::Infectious => {
+                if self.is_sick(time) {
+                    self.status = Status::Sick;
+                    self.t_sick = Some(time);
+                }
+            },
+            Status::Sick => {
+                if self.is_dead(time, rng) {
+                    self.status = Status::Dead;
+                    self.t_died = Some(time);
+                }
+            },
+            Status::Dead => {}
         }
     }
 }
 
-impl HasId for Person {
-    fn id(&self) -> usize {
-        self.id
-    }
-    
-    fn set_id(&mut self, value: usize) {
-        self.id = value;
-    }
-}
-
-pub trait HasId {
-    fn id(&self) -> usize;
-    fn set_id(&mut self, value: usize);
-}
-
-pub struct ObjectFactory<T> {
+pub struct PersonFactory {
     last_id: usize
 }
 
-impl<T: HasId> ObjectFactory<T> {
-    pub fn new() -> ObjectFactory<T> {
-        ObjectFactory {
+impl PersonFactory {
+    pub fn new() -> PersonFactory {
+        PersonFactory {
             last_id: 0
         }
     }
 
-    pub fn wrap(&mut self, thing: &mut T) {
-        thing.set_id(self.last_id);
+    pub fn new_person(&mut self, status: Status, position: Position) -> Person {
+        let person = Person {
+            position: position,
+            status: status,
+            id: self.last_id,
+            facing_direction: Direction::Right,
+            t_infected: None,
+            t_sick: None,
+            t_died: None
+        };
+
         self.last_id += 1;
+        person
     }
 }
+ 
