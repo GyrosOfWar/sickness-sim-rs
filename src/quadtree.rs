@@ -94,21 +94,15 @@ impl<T: HasCoordinates> QuadTreeNode<T> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use cgmath::{Point2, Aabb2};
-
-    #[derive(Debug, Clone)]
-    struct Value { p: Point2<u32> }
-    impl HasCoordinates for Value {
-        fn coords(&self) -> Point2<u32> {
-            self.p
-        }
-    }
-    
+    use person::{Status, Person};
     #[test]
     fn insert_values() {
-        //let mut tree: QuadTree<Value> = QuadTree::new(Aabb2::new(Point2::new(0, 0), Point2::new(100, 100)));
-        
+        let mut tree = QuadTree::new(Aabb2::new(Point2::new(0, 0), Point2::new(100, 100)));
+        let person = Person::new(0, Point2::new(12, 12), Status::Healthy);
+        tree.push(person);
     }
 }

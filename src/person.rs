@@ -2,6 +2,7 @@ use cgmath::Point2;
 use constants::*;
 use rand::{ThreadRng, Rng};
 use std::num::Float;
+use quadtree::HasCoordinates;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Status {
@@ -99,6 +100,12 @@ impl Person {
             },
             Status::Dead => {}
         }
+    }
+}
+
+impl HasCoordinates for Person {
+    fn coords(&self) -> Point2<u32> {
+        self.position
     }
 }
 
