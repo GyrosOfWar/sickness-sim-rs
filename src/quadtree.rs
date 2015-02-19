@@ -38,6 +38,10 @@ impl<T: HasCoordinates> QuadTree<T> {
         if !success { panic!("Could not insert value into tree!"); }
         self.size += 1;
     }
+
+    pub fn range_search(&self, range: Bounds) -> Vec<T> {
+        self.root.range_search(range)
+    }
 }
 
 // TODO make private after debugging
@@ -60,21 +64,10 @@ b.y <= a.y + a.height;
 */
 
 fn bounds_intersecting(a: Bounds, b: Bounds) -> bool {
-    let ax = a.min.x;
-    let ay = a.min.y;
-    let bx = b.min.x;
-    let by = b.min.y;
-
-    let a_xs = a.dim().x;
-    let a_ys = a.dim().y;
-
-    let b_xs = b.dim().x;
-    let b_ys = b.dim().y;
-
-    ax <= bx + b_xs &&
-        bx <= ax + a_xs &&
-        ay <= by + b_ys &&
-        by <= ay + a_ys
+    a.min.x <= b.max.x &&
+    b.min.x <= a.max.x &&
+    a.min.y <= b.max.y &&
+    b.min.y <= a.max.y
 }
 
 impl<T: HasCoordinates> QuadTreeNode<T> {
@@ -185,12 +178,45 @@ impl<T: HasCoordinates> QuadTreeNode<T> {
 mod tests {
     use super::*;
     use cgmath::{Point2, Aabb2};
-    use person::{Status, Person};
+    use rand::{Rng, thread_rng};
+    use constants::*;
+    
+    #[derive(Debug, PartialEq, Clone)]
+    struct Value(Point2<u32>);
+    
+    impl HasCoordinates for Value {
+        fn coords(&self) -> Point2<u32> {
+            match *self {
+                Value(p) => p
+            }
+        }
+    }
     
     #[test]
-    fn insert_values() {
-        let mut tree: QuadTree<Person> = QuadTree::new(Aabb2::new(Point2::new(0, 0), Point2::new(100, 100)));
-        let person = Person::new(0, Point2::new(12, 12), Status::Healthy);
-        tree.push(person);
+    fn query_range() {
+        let full_bound = Aabb2::new(Point2::new(0, 0), Point2::new(ROOM_SIZE, ROOM_SIZE));        
+        let mut tree = QuadTree::new(full_bound);
+        
+        let mut rand = thread_rng();
+        let mut points = Vec::new();
+        // Add 100 random points
+        for i in (0..100) {
+            let x: f64 = rand.gen() * (ROOM_SIZE as f64);
+            let y: f64 = rand.gen() * (ROOM_SIZE as f64);
+
+            let v = Value(Point2::new(x as u32, y as u32));
+            tree.push(v.clone());
+            points.push(v);
+        }
+        let range_query = tree.range_search(full_bound);
+
+        for p in range_query.iter() {
+            assert!(points.contains(p));
+        }
+    }
+
+    #[test]
+    fn query_range_2() {
+        
     }
 }
