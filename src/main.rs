@@ -1,7 +1,10 @@
 extern crate cgmath;
 extern crate rand;
 
-use simulation::Simulation;
+use quadtree::*;
+use person::{Person, Status};
+use cgmath::{Aabb2, Point2};
+use simulation::*;
 
 pub mod person;
 pub mod simulation;
@@ -26,10 +29,32 @@ mod constants {
     pub const DIE_RATE: f64 = 0.0001;
 }
 
-fn main() {
-    let mut sim = Simulation::new();
+#[derive(Debug, PartialEq, Clone)]
+struct Value(Point2<u32>);
 
-    while !sim.is_finished() {
-        sim.tick();
+impl HasCoordinates for Value {
+    fn coords(&self) -> Point2<u32> {
+        match *self {
+            Value(p) => p
+        }
     }
+}
+    
+fn main() {
+    use rand::{Rng, thread_rng};
+    use constants::*;
+    
+    let mut tree: QuadTree<Value> = QuadTree::new(Aabb2::new(Point2::new(0, 0), Point2::new(ROOM_SIZE, ROOM_SIZE)));
+
+    let mut rand = thread_rng();
+
+    for i in (0..100) {
+        let x: f64 = rand.gen() * (ROOM_SIZE as f64);
+        let y: f64 = rand.gen() * (ROOM_SIZE as f64);
+
+        let v = Value(Point2::new(x as u32, y as u32));
+        tree.push(v);
+    }
+    
+    println!("{:?}", tree.root);
 }

@@ -14,8 +14,8 @@ impl Simulation {
     pub fn new() -> Simulation {
         let mut rng = thread_rng();
         let population: Vec<Person> = rng
-            .gen_iter::<(u32, u32)>()
-            .map(|(x, y)| Point2::new(x * ROOM_SIZE, y * ROOM_SIZE ))
+            .gen_iter::<(f64, f64)>()
+            .map(|(x, y)| Point2::new((x * ROOM_SIZE as f64) as u32, (y * ROOM_SIZE as f64) as u32))
             .enumerate()
             .map(|(i, pos)| {
                 let status = if i < INITIAL_INFECTED as usize {
@@ -46,7 +46,6 @@ impl Simulation {
             //     println!("{:?}", q);
             // }
             p.tick(self.current_time, &mut self.rng);
-            
         }
 
         self.current_time += 1;

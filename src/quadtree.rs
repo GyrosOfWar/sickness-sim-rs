@@ -1,4 +1,4 @@
-use cgmath::{Aabb, Aabb2, Point2};
+use cgmath::{Aabb, Aabb2, Point2, Point};
 use std::clone::Clone;
 
 pub const NODE_CAPACITY: usize = 16;
@@ -11,7 +11,8 @@ pub trait HasCoordinates: Clone {
 
 #[derive(Debug)]
 pub struct QuadTree<T> {
-    root: QuadTreeNode<T>,
+    // TODO make private after debugging
+    pub root: QuadTreeNode<T>,
     size: usize
 }
 
@@ -21,7 +22,10 @@ impl<T: HasCoordinates> QuadTree<T> {
             root: QuadTreeNode {
                 values: Vec::with_capacity(NODE_CAPACITY),
                 bounds: bounds,
-                children: Box::new(None),
+                nw: Box::new(None),
+                ne: Box::new(None),
+                sw: Box::new(None),
+                se: Box::new(None),
                 level: 0
             },
             // Empty nodes don't count for size
@@ -36,43 +40,94 @@ impl<T: HasCoordinates> QuadTree<T> {
     }
 }
 
+// TODO make private after debugging
 #[derive(Debug)]
-struct QuadTreeNode<T> {
-    values: Vec<T>,
+pub struct QuadTreeNode<T> {
+    pub values: Vec<T>,
     bounds: Bounds,
-    children: Box<Option<[QuadTreeNode<T>; 4]>>,
+    nw: Box<Option<QuadTreeNode<T>>>,
+    ne: Box<Option<QuadTreeNode<T>>>,
+    se: Box<Option<QuadTreeNode<T>>>,
+    sw: Box<Option<QuadTreeNode<T>>>,
     level: usize
 }
 
+/* 
+a.x <= b.x + b.width &&
+b.x <= a.x + a.width &&
+a.y <= b.y + b.height &&
+b.y <= a.y + a.height;
+*/
+
+fn bounds_intersecting(a: Bounds, b: Bounds) -> bool {
+    let ax = a.min.x;
+    let ay = a.min.y;
+    let bx = b.min.x;
+    let by = b.min.y;
+
+    let a_xs = a.dim().x;
+    let a_ys = a.dim().y;
+
+    let b_xs = b.dim().x;
+    let b_ys = b.dim().y;
+
+    ax <= bx + b_xs &&
+        bx <= ax + a_xs &&
+        ay <= by + b_ys &&
+        by <= ay + a_ys
+}
+
 impl<T: HasCoordinates> QuadTreeNode<T> {
-    fn new(values: Vec<T>, bounds: Bounds, children: Option<[QuadTreeNode<T>; 4]>, level: usize) -> QuadTreeNode<T> {
+    fn new(values: Vec<T>, bounds: Bounds, level: usize) -> QuadTreeNode<T> {
         QuadTreeNode {
             values: values,
             bounds: bounds,
-            children: Box::new(children),
+            nw: Box::new(None),
+            ne: Box::new(None),
+            sw: Box::new(None),
+            se: Box::new(None),
+            level: level
+        }
+    }
+
+    fn empty(bounds: Bounds, level: usize) -> QuadTreeNode<T> {
+        QuadTreeNode {
+            values: Vec::with_capacity(NODE_CAPACITY),
+            bounds: bounds,
+            nw: Box::new(None),
+            ne: Box::new(None),
+            sw: Box::new(None),
+            se: Box::new(None),
             level: level
         }
     }
 
     fn subdivide(&mut self) {
-        let x_size = self.bounds.dim().x / 2;
-        let y_size = self.bounds.dim().y / 2;
+        let xs = self.bounds.dim().x;
+        let ys = self.bounds.dim().y;
 
+        let xs_half = xs / 2;
+        let ys_half = ys / 2;
+        
         let x = self.bounds.min.x;
         let y = self.bounds.min.y;
-        
-        let ch = Some([
-            QuadTreeNode::new(Vec::new(), Aabb2::new(Point2::new(x, y), Point2::new(x + x_size, y + y_size)), None, self.level + 1),
-            QuadTreeNode::new(Vec::new(), Aabb2::new(Point2::new(x + x_size, y), Point2::new(x + x_size * 2, y + y_size)), None, self.level + 1),
-            QuadTreeNode::new(Vec::new(), Aabb2::new(Point2::new(x, y + y_size), Point2::new(x + x_size, y + y_size * 2)), None, self.level + 1),
-            QuadTreeNode::new(Vec::new(), Aabb2::new(Point2::new(x + x_size, y + y_size), Point2::new(x + x_size * 2, y + y_size * 2)), None, self.level + 1),
-            ]);
-        
-        self.children = Box::new(ch);
+
+        let nw_box = Aabb::new(Point2::new(x, y), Point2::new(x + xs_half, y + ys_half));
+        let ne_box = Aabb::new(Point2::new(x + xs_half, y), Point2::new(x + xs, y + ys_half));
+        let sw_box = Aabb::new(Point2::new(x, y + ys_half), Point2::new(x + xs_half, y + ys));
+        let se_box = Aabb::new(Point2::new(x + xs_half, y + ys_half), Point2::new(x + xs, y + ys));
+
+        self.nw = Box::new(Some(QuadTreeNode::empty(nw_box, self.level + 1)));
+        self.ne = Box::new(Some(QuadTreeNode::empty(ne_box, self.level + 1)));
+        self.sw = Box::new(Some(QuadTreeNode::empty(sw_box, self.level + 1)));
+        self.se = Box::new(Some(QuadTreeNode::empty(se_box, self.level + 1)));
     }
 
     fn insert(&mut self, value: T) -> bool {
+        println!("Inserting value at level {}!", self.level);
+        
         if !self.bounds.contains(&value.coords()) {
+            println!("Value does not fit!");
             return false;
         }
         
@@ -81,16 +136,48 @@ impl<T: HasCoordinates> QuadTreeNode<T> {
             return true;
         }
 
-        if self.children.is_none() {
+        if !self.nw.is_some() {
             self.subdivide();
         }
 
-        for c in self.children.as_mut().unwrap().iter_mut() {
-            if c.insert(value.clone()) {
-                return true;
+        if self.nw.as_mut().unwrap().insert(value.clone()) {
+            return true;
+        }
+        if self.ne.as_mut().unwrap().insert(value.clone()) {
+            return true;
+        }
+        if self.sw.as_mut().unwrap().insert(value.clone()) {
+            return true;
+        }
+        if self.ne.as_mut().unwrap().insert(value.clone()) {
+            return true;
+        }
+        
+        panic!("Insertion failed for unknown reason!")
+    }
+
+    fn range_search(&self, bounds: Bounds) -> Vec<T> {
+        let mut result = Vec::new();
+
+        if !bounds_intersecting(self.bounds, bounds) {
+            return result;
+        }
+
+        for p in self.values.iter() {
+            if bounds.contains(&p.coords()) {
+                result.push(p.clone());
             }
         }
-        panic!("Insertion failed for unknown reason!")
+
+        if self.nw.is_none() {
+            return result;
+        }
+        result.push_all(&self.nw.as_ref().unwrap().range_search(bounds)[]);
+        result.push_all(&self.ne.as_ref().unwrap().range_search(bounds)[]);
+        result.push_all(&self.sw.as_ref().unwrap().range_search(bounds)[]);
+        result.push_all(&self.ne.as_ref().unwrap().range_search(bounds)[]);
+
+        result
     }
 }
 
@@ -99,9 +186,10 @@ mod tests {
     use super::*;
     use cgmath::{Point2, Aabb2};
     use person::{Status, Person};
+    
     #[test]
     fn insert_values() {
-        let mut tree = QuadTree::new(Aabb2::new(Point2::new(0, 0), Point2::new(100, 100)));
+        let mut tree: QuadTree<Person> = QuadTree::new(Aabb2::new(Point2::new(0, 0), Point2::new(100, 100)));
         let person = Person::new(0, Point2::new(12, 12), Status::Healthy);
         tree.push(person);
     }
