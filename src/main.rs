@@ -1,10 +1,9 @@
+#![feature(test)]
+
 extern crate cgmath;
 extern crate rand;
-
-use quadtree::*;
-use person::{Person, Status};
-use cgmath::{Aabb2, Point2};
-use simulation::*;
+extern crate test;
+extern crate ntree;
 
 pub mod person;
 pub mod simulation;
@@ -14,7 +13,7 @@ pub mod quadtree;
 mod constants {
     pub const POPULATION_SIZE: u32 = 30;    
     pub const INITIAL_INFECTED: u32 = 15;
-    pub const INFLUENCE_RADIUS: f64 = 25.0;
+    pub const INFLUENCE_RADIUS: u32 = 25;
     
     pub const INFECTIOUS_INFECTION_RATE: f64 = 0.01;
     pub const SICK_INFECTION_RATE: f64 = 0.01;
@@ -28,7 +27,7 @@ mod constants {
     pub const REMOVE_DEAD_AFTER: u32 = 20;
     pub const DIE_RATE: f64 = 0.0001;
 }
- 
+
 fn main() {
-    
+    //let mut ntree;
 }

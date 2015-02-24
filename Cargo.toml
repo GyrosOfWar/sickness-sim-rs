@@ -7,3 +7,6 @@ authors = ["Martin Tomasi <martin.tomasi@gmail.com>"]
 [dependencies]
 cgmath = "*"
 rand = "*"
+
+[dependencies.n-tree]
+git = "https://github.com/GyrosOfWar/rust-n-tree"

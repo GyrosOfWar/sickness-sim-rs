@@ -1,8 +1,7 @@
 use cgmath::Point2;
 use constants::*;
-use rand::{ThreadRng, Rng};
+use rand::{XorShiftRng, Rng};
 use std::num::Float;
-use quadtree::HasCoordinates;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Status {
@@ -59,7 +58,7 @@ impl Person {
         }
     }
 
-    fn is_dead(&self, time: u32, rng: &mut ThreadRng) -> bool {
+    fn is_dead(&self, time: u32, rng: &mut XorShiftRng) -> bool {
         match self.t_sick {
             Some(sick) => {
                 if time >= sick + TIME_SICK {
@@ -82,7 +81,7 @@ impl Person {
         ((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)).sqrt()
     }
     
-    pub fn tick(&mut self, time: u32, rng: &mut ThreadRng) {
+    pub fn tick(&mut self, time: u32, rng: &mut XorShiftRng) {
         // TODO
         match self.status {
             Status::Healthy => {},
@@ -103,22 +102,16 @@ impl Person {
     }
 }
 
-impl HasCoordinates for Person {
-    fn coords(&self) -> Point2<u32> {
-        self.position
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::thread_rng;
+    use rand::weak_rng;
     use cgmath::Point2;
     use constants::*;
     
     #[test]
     fn state_changes() {
-        let mut rng = thread_rng();
+        let mut rng = weak_rng();
         let mut person = Person::new(0, Point2::new(0, 0), Status::Infectious);
         for i in (1..TIME_INFECTIOUS+1) {
             person.tick(i, &mut rng);
